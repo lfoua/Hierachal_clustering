@@ -32,17 +32,39 @@ def find_min(matrix):
         key = k
     return min_index,key
 
+def get_candidate_genes():
+    #import the textfile and put it in a list
+    lista=pd.read_csv('Candidate_genes.txt',sep='\n',header=None)[0].tolist()
+
+    #remove the the 2 backslach 
+    #for ind,elt in enumerate (lista):
+        #elt= elt[:len(elt)-1]
+        #lista[ind]=elt
+    #print(len(lista))
+
+    #delete any non candidate gene
+    data = pd.read_excel('Longotor1delta.xls')
+    data_col = data["Public ID"].tolist()
+    #print(len(data_col))
+    for i in range(len(data_col)):
+        if data_col[i] not in lista:
+            data = data.drop(labels=[i], axis=0)
+    return data
+
+#while there are srill elements to cluster
+def stop_clustering(x, y):
+    return any((True for a in x if a in y))
 # Perform agglomerative clustering
 def agglomerative_clustering():
     
-    data = pd.read_excel('Longotor1delta.xls')
-    n_clusters = 1  # we wanna get to 1 cluster
+    data = get_candidate_genes()
     clusters_results = {}
-    for i in ['sch9/wt','ras2/wt','tor1/wt' ]:
-        data_col = data.loc[:, i]   
+    
+    for i in ['sch9/wt_normalized','ras2/wt_normalized','tor1/wt_normalized']:
+        data_col = data.loc[:, i] 
         curr_clusters = [(i,) for i in data_col] #every element is taken as a cluster at first
-        clusters =[]
-        while len(curr_clusters) > n_clusters:
+        clusters = [(i,) for i in data_col]
+        while len(curr_clusters) > 6:
             
             dist_matrix = distance_matrix(curr_clusters)
             min_index, key = find_min(dist_matrix)
@@ -56,11 +78,44 @@ def agglomerative_clustering():
             del curr_clusters[col]
             del curr_clusters[row]
             
-            clusters.append(merge_indices)
             curr_clusters.append(merge_indices)
-        clusters_results[i] = clusters
+        clusters_results[i] = curr_clusters
+        
     return clusters_results
-       
+"""def longevity_ids():
+    for k, v in clusters_results.items():
+        """
+#go through longevity_genes, get their sch9/wt, and put them
+#in a list and use hte list down here for the comparison
+def longevity_genes():
+    clusters_results = agglomerative_clustering()
+    longevity_genes=pd.read_csv('Longevity_genes.txt',sep='\n',header=None)[0].tolist()
+    data = pd.read_excel('Longotor1delta.xls')
+    for i in ['sch9/wt','ras2/wt','tor1/wt']:
+                   arr=[]
+                   for j in clusters_results.values():
+                       arra=[]
+                       for k in j:
+                          for l in k:
+                              #l = "%.4f" % l
+                              #print(l)
+                              try:
+                                  df=data.query(i==l)['Public ID']
+                                  print(df) 
+                                  arra.append(df)
+                              except:
+                                  pass 
+                       arr.append(arra)
+                   clusters_results[i]=arr
+    
+    longevity_candidates = []
+    for i in clusters_results.values():
+        if any((True for a in longevity_genes if a in i)):
+            longevity_candidates.append(i)
+    return longevity_candidates, clusters_results
 
+
+#print(longevity_genes())
 if __name__ == '__main__':
-    print(agglomerative_clustering())
+    #print(agglomerative_clustering())
+    print(longevity_genes())
